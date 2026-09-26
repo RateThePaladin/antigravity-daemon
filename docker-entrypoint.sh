@@ -35,8 +35,12 @@ chown -R ${PUID}:${PGID} /config/.gemini
 # If a Doppler token is provided, wrap the agent execution to inject secrets
 EXEC_CMD="/usr/local/bin/agy"
 if [ -n "$DOPPLER_TOKEN" ]; then
-  echo "Doppler token detected. Injecting secrets..."
-  EXEC_CMD="doppler run -- /usr/local/bin/agy"
+  if doppler secrets >/dev/null 2>&1; then
+    echo "Doppler token detected and validated. Injecting secrets..."
+    EXEC_CMD="doppler run -- /usr/local/bin/agy"
+  else
+    echo "WARNING: Provided Doppler token is invalid! Proceeding without secret injection."
+  fi
 fi
 
 # Fix TTY permissions for the unprivileged user
