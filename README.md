@@ -48,13 +48,13 @@ This daemon is entirely configured via environment variables.
 
 ## First-Time Authentication
 The first time the container starts, you will need to authenticate the agent:
-1. Exec into the running container:
+1. Open your Unraid web GUI, click the **Antigravity-Daemon** icon, and select **Console**.
+2. Run the following command to securely launch the agent as your persistent Unraid user:
    ```bash
-   docker exec -it antigravity-daemon bash
+   gosu 99:100 env HOME=/config agy
    ```
-2. Type `agy` to launch the interactive prompt.
-3. It will provide an OAuth URL. Open it on your phone or computer and sign in.
-4. Exit the container (`Ctrl+D`).
+3. It will provide a clickable OAuth URL. Open it on your phone or computer and sign in.
+4. Exit the console (`Ctrl+D`).
 Because your `/config` folder is persistently mapped, you will never have to sign in again!
 
 ## Secrets Management (Doppler)

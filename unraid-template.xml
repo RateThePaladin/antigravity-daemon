@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Antigravity-Daemon</Name>
-  <Repository>ghcr.io/RateThePaladin/antigravity-daemon:latest</Repository>
+  <Repository>ghcr.io/ratethepaladin/antigravity-daemon:latest</Repository>
   <Registry>https://ghcr.io/</Registry>
   <Network>bridge</Network>
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
   <Overview>A headless Docker wrapper for the Google Antigravity CLI, designed to run as a persistent remote-control daemon.</Overview>
   <Category>Tools:Utilities</Category>
-  <Icon>https://antigravity.google/favicon.ico</Icon>
+  <Icon>https://antigravity.google/apple-touch-icon.png</Icon>
   <ExtraParams>--tty --interactive</ExtraParams>
   
   <Config Name="Appdata Config" Target="/config" Default="/mnt/user/appdata/antigravity-daemon" Mode="rw" Description="Persistent storage for the agent's OAuth tokens and logs." Type="Path" Display="always" Required="true" Mask="false"/>
@@ -17,7 +17,7 @@
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Container User ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Container Group ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   
-  <Config Name="Agent Model" Target="AGY_MODEL" Default="gemini-3.1-pro" Mode="" Description="The LLM model the agent uses." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Agent Model" Target="AGY_MODEL" Default="pro" Mode="" Description="The LLM model the agent uses." Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="Skip Permissions" Target="AGY_SKIP_PERMISSIONS" Default="false" Mode="" Description="Set to 'true' to run headlessly without pausing for command approvals." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="Doppler Token" Target="DOPPLER_TOKEN" Default="" Mode="" Description="Optional: Doppler Service Token to inject secrets into the agent's environment." Type="Variable" Display="always" Required="false" Mask="true"/>
 </Container>

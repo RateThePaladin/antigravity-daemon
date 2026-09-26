@@ -27,7 +27,7 @@ export HOME=/config
 mkdir -p /config/.gemini/antigravity-cli
 cat <<EOF > /config/.gemini/antigravity-cli/settings.json
 {
-  "model": "${AGY_MODEL:-gemini-3.1-pro}"
+  "model": "${AGY_MODEL:-pro}"
 }
 EOF
 chown -R ${PUID}:${PGID} /config/.gemini
@@ -43,6 +43,23 @@ if [ -n "$DOPPLER_TOKEN" ]; then
   fi
 fi
 
+# Print Unraid standard startup logs
+echo "-------------------------------------"
+echo "      Antigravity Headless Daemon    "
+echo "-------------------------------------"
+echo "User UID:  ${PUID}"
+echo "User GID:  ${PGID}"
+echo "LLM Model: ${AGY_MODEL:-pro}"
+echo "-------------------------------------"
+echo ""
+echo "📌 AUTHENTICATION CHECK:"
+echo "If this is your first time starting the container, or if"
+echo "the agent is failing to connect to your remote dashboard,"
+echo "you must authenticate by opening the Unraid console and running:"
+echo "   gosu ${PUID}:${PGID} env HOME=/config agy"
+echo "-------------------------------------"
+echo ""
+
 # Fix TTY permissions for the unprivileged user
 echo "TTY before chown: $(tty)" > /config/debug.log
 ls -l $(tty) >> /config/debug.log 2>&1
@@ -53,6 +70,7 @@ ls -l $(tty) >> /config/debug.log 2>&1
 echo "Finished TTY setup, executing gosu..." >> /config/debug.log
 
 # Run the CLI in the foreground with remote control enabled, dropping privileges via gosu
+cd /workspace
 if [ "${AGY_SKIP_PERMISSIONS:-false}" = "true" ]; then
   exec gosu $AGY_USER $EXEC_CMD --remote-control --dangerously-skip-permissions
 else
