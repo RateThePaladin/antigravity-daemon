@@ -29,11 +29,11 @@ export HOME=/config
 
 # Generate the CLI settings from Docker environment variables
 mkdir -p /config/.gemini/antigravity-cli
-cat <<EOF > /config/.gemini/antigravity-cli/settings.json
-{
-  "model": "${AGY_MODEL:-Gemini 3.1 Pro (High)}"
-}
-EOF
+SETTINGS_FILE="/config/.gemini/antigravity-cli/settings.json"
+if [ ! -f "$SETTINGS_FILE" ]; then
+  echo '{}' > "$SETTINGS_FILE"
+fi
+jq --arg model "${AGY_MODEL:-Gemini 3.1 Pro (High)}" '.model = $model' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 chown -R ${PUID}:${PGID} /config/.gemini
 
 # If a Doppler token is provided, wrap the agent execution to inject secrets

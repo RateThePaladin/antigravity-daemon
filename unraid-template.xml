@@ -8,7 +8,7 @@
   <Privileged>false</Privileged>
   <Overview>A headless Docker wrapper for the Google Antigravity CLI, designed to run as a persistent remote-control daemon.</Overview>
   <Category>Tools:Utilities</Category>
-  <Icon>https://antigravity.google/apple-touch-icon.png</Icon>
+  <Icon>https://raw.githubusercontent.com/RateThePaladin/antigravity-daemon/refs/heads/main/assets/icon.png</Icon>
   <ExtraParams>--tty --interactive --hostname=Antigravity-Daemon</ExtraParams>
   
   <Config Name="Appdata Config" Target="/config" Default="/mnt/user/appdata/antigravity-daemon" Mode="rw" Description="Persistent storage for the agent's OAuth tokens and logs." Type="Path" Display="always" Required="true" Mask="false"/>
