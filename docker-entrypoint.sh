@@ -27,13 +27,12 @@ chown -R ${PUID}:${PGID} /config /workspace
 # Set HOME so agy knows where to look for configs
 export HOME=/config
 
-# Generate the CLI settings from Docker environment variables
+# Generate the CLI settings if they don't exist yet
 mkdir -p /config/.gemini/antigravity-cli
 SETTINGS_FILE="/config/.gemini/antigravity-cli/settings.json"
 if [ ! -f "$SETTINGS_FILE" ]; then
-  echo '{}' > "$SETTINGS_FILE"
+  echo '{"model": "Gemini 3.1 Pro (High)"}' > "$SETTINGS_FILE"
 fi
-jq --arg model "${AGY_MODEL:-Gemini 3.1 Pro (High)}" '.model = $model' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 chown -R ${PUID}:${PGID} /config/.gemini
 
 # If a Doppler token is provided, wrap the agent execution to inject secrets
@@ -53,7 +52,6 @@ echo "      Antigravity Headless Daemon    "
 echo "-------------------------------------"
 echo "User UID:  ${PUID}"
 echo "User GID:  ${PGID}"
-echo "LLM Model: ${AGY_MODEL:-Gemini 3.1 Pro (High)}"
 echo "-------------------------------------"
 echo ""
 echo "📌 AUTHENTICATION CHECK:"
@@ -65,18 +63,14 @@ echo "-------------------------------------"
 echo ""
 
 # Fix TTY permissions for the unprivileged user
-echo "TTY before chown: $(tty)" > /config/debug.log
-ls -l $(tty) >> /config/debug.log 2>&1
 if [ -t 0 ]; then
-  chown ${PUID}:${PGID} $(tty) 2>>/config/debug.log || true
+  echo "TTY before chown: $(tty)"
+  ls -l $(tty)
+  chown ${PUID}:${PGID} $(tty) 2>/dev/null || true
+  echo "TTY after chown:"
+  ls -l $(tty)
 fi
-ls -l $(tty) >> /config/debug.log 2>&1
-echo "Finished TTY setup, executing gosu..." >> /config/debug.log
 
 # Run the CLI in the foreground with remote control enabled, dropping privileges via gosu
 cd /workspace
-if [ "${AGY_SKIP_PERMISSIONS:-false}" = "true" ]; then
-  exec gosu $AGY_USER $EXEC_CMD --remote-control --dangerously-skip-permissions
-else
-  exec gosu $AGY_USER $EXEC_CMD --remote-control
-fi
+exec gosu $AGY_USER $EXEC_CMD --remote-control -c

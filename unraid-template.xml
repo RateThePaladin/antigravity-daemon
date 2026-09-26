@@ -16,8 +16,5 @@
   
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Container User ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Container Group ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
-  
-  <Config Name="Agent Model" Target="AGY_MODEL" Default="Gemini 3.1 Pro (High)" Mode="" Description="The LLM model the agent uses." Type="Variable" Display="always" Required="true" Mask="false"/>
-  <Config Name="Skip Permissions" Target="AGY_SKIP_PERMISSIONS" Default="false" Mode="" Description="Set to 'true' to run headlessly without pausing for command approvals." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="Doppler Token" Target="DOPPLER_TOKEN" Default="" Mode="" Description="Optional: Doppler Service Token to inject secrets into the agent's environment." Type="Variable" Display="always" Required="false" Mask="true"/>
 </Container>

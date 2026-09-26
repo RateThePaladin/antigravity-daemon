@@ -57,6 +57,26 @@ The first time the container starts, you will need to authenticate the agent:
 4. Exit the console (`Ctrl+D`).
 Because your `/config` folder is persistently mapped, you will never have to sign in again!
 
+## Managing Agent Settings
+Instead of setting Docker environment variables, this container utilizes the Antigravity CLI's native configuration file for persistence.
+
+To change the LLM model or edit permission settings (like disabling confirmation prompts), simply edit the `settings.json` file in your mapped Appdata folder:
+`/mnt/user/appdata/antigravity-daemon/.gemini/antigravity-cli/settings.json`
+
+Example:
+```json
+{
+  "model": "Gemini 3.1 Pro (High)",
+  "permissions": {
+    "allow": ["*"]
+  },
+  "trustedWorkspaces": [
+    "/workspace"
+  ]
+}
+```
+Restart the container to apply any manual edits to this file!
+
 ## Secrets Management (Doppler)
 If you provide a `DOPPLER_TOKEN` environment variable, the container automatically authenticates with Doppler and securely injects your remote project secrets into the agent's environment.
 
