@@ -51,7 +51,7 @@ The first time the container starts, you will need to authenticate the agent:
 1. Open your Unraid web GUI, click the **Antigravity-Daemon** icon, and select **Console**.
 2. Run the following command to securely launch the agent as your persistent Unraid user:
    ```bash
-   gosu 99:100 env HOME=/config agy
+   cd /workspace && gosu 99:100 env HOME=/config agy
    ```
 3. It will provide a clickable OAuth URL. Open it on your phone or computer and sign in.
 4. Exit the console (`Ctrl+D`).

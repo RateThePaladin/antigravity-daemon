@@ -9,7 +9,7 @@
   <Overview>A headless Docker wrapper for the Google Antigravity CLI, designed to run as a persistent remote-control daemon.</Overview>
   <Category>Tools:Utilities</Category>
   <Icon>https://antigravity.google/apple-touch-icon.png</Icon>
-  <ExtraParams>--tty --interactive</ExtraParams>
+  <ExtraParams>--tty --interactive --hostname=Antigravity-Daemon</ExtraParams>
   
   <Config Name="Appdata Config" Target="/config" Default="/mnt/user/appdata/antigravity-daemon" Mode="rw" Description="Persistent storage for the agent's OAuth tokens and logs." Type="Path" Display="always" Required="true" Mask="false"/>
   <Config Name="Workspace" Target="/workspace" Default="/mnt/user/Projects/workspace" Mode="rw" Description="The primary folder where the agent will view and edit files." Type="Path" Display="always" Required="true" Mask="false"/>
@@ -17,7 +17,7 @@
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Container User ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Container Group ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   
-  <Config Name="Agent Model" Target="AGY_MODEL" Default="pro" Mode="" Description="The LLM model the agent uses." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Agent Model" Target="AGY_MODEL" Default="Gemini 3.1 Pro (High)" Mode="" Description="The LLM model the agent uses." Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="Skip Permissions" Target="AGY_SKIP_PERMISSIONS" Default="false" Mode="" Description="Set to 'true' to run headlessly without pausing for command approvals." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="Doppler Token" Target="DOPPLER_TOKEN" Default="" Mode="" Description="Optional: Doppler Service Token to inject secrets into the agent's environment." Type="Variable" Display="always" Required="false" Mask="true"/>
 </Container>

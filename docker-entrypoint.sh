@@ -16,6 +16,10 @@ if [ -z "$AGY_USER" ]; then
   AGY_USER="${PUID}:${PGID}"
 fi
 
+# Grant passwordless sudo to the unprivileged user so the agent can install tools
+echo "${AGY_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${AGY_USER}
+chmod 0440 /etc/sudoers.d/${AGY_USER}
+
 # Set ownership of mounted directories
 mkdir -p /config /workspace
 chown -R ${PUID}:${PGID} /config /workspace
@@ -27,7 +31,7 @@ export HOME=/config
 mkdir -p /config/.gemini/antigravity-cli
 cat <<EOF > /config/.gemini/antigravity-cli/settings.json
 {
-  "model": "${AGY_MODEL:-pro}"
+  "model": "${AGY_MODEL:-Gemini 3.1 Pro (High)}"
 }
 EOF
 chown -R ${PUID}:${PGID} /config/.gemini
@@ -49,14 +53,14 @@ echo "      Antigravity Headless Daemon    "
 echo "-------------------------------------"
 echo "User UID:  ${PUID}"
 echo "User GID:  ${PGID}"
-echo "LLM Model: ${AGY_MODEL:-pro}"
+echo "LLM Model: ${AGY_MODEL:-Gemini 3.1 Pro (High)}"
 echo "-------------------------------------"
 echo ""
 echo "📌 AUTHENTICATION CHECK:"
 echo "If this is your first time starting the container, or if"
 echo "the agent is failing to connect to your remote dashboard,"
 echo "you must authenticate by opening the Unraid console and running:"
-echo "   gosu ${PUID}:${PGID} env HOME=/config agy"
+echo "   cd /workspace && gosu ${PUID}:${PGID} env HOME=/config agy"
 echo "-------------------------------------"
 echo ""
 
