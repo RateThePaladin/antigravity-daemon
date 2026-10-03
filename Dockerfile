@@ -4,7 +4,9 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     curl wget bash git openssh-client ca-certificates gosu sudo \
     python3 python3-pip python3-venv \
-    nodejs npm build-essential jq unzip tree && \
+    build-essential jq unzip tree && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
     curl -fsSL https://antigravity.google/cli/install.sh | bash && \
     mkdir -p /usr/local/bin && \
     mv /root/.local/bin/agy /usr/local/bin/agy || true
