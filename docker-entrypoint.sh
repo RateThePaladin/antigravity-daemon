@@ -73,4 +73,8 @@ fi
 
 # Run the CLI in the foreground with remote control enabled, dropping privileges via gosu
 cd /workspace
-exec gosu $AGY_USER $EXEC_CMD --remote-control -c
+if [ -n "$AGY_INSTANCE_NAME" ]; then
+  exec gosu $AGY_USER $EXEC_CMD --remote-control-name "$AGY_INSTANCE_NAME" -c
+else
+  exec gosu $AGY_USER $EXEC_CMD --remote-control -c
+fi

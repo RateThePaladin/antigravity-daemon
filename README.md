@@ -45,6 +45,7 @@ This daemon is entirely configured via environment variables.
 | `AGY_MODEL` | *(None)* | The LLM model you want the agent to use (e.g. `gemini-3.1-pro`). |
 | `AGY_SKIP_PERMISSIONS` | `false` | Set to `true` to run fully autonomously. This bypasses human approval checks, allowing the agent to execute commands and write files headlessly. |
 | `DOPPLER_TOKEN` | *(Optional)* | Your Doppler service token for auto-injecting project secrets. |
+| `AGY_INSTANCE_NAME` | *(Optional)* | Locks the remote-control session to a specific name. Prevents offline "ghost" instances from being created when the container updates. |
 
 ## First-Time Authentication
 The first time the container starts, you will need to authenticate the agent:
