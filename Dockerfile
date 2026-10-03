@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     apt-get install -y nodejs && \
     curl -fsSL https://antigravity.google/cli/install.sh | bash && \
     mkdir -p /usr/local/bin && \
-    mv /root/.local/bin/agy /usr/local/bin/agy || true
+    mv /root/.local/bin/agy /usr/local/bin/agy
 
 # Install Doppler CLI
 RUN curl -Ls --tlsv1.2 --proto "=https" --retry 3 https://cli.doppler.com/install.sh | sh
