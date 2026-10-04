@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y \
     mkdir -p /usr/local/bin && \
     mv /root/.local/bin/agy /usr/local/bin/agy
 
-# Install Doppler CLI
-RUN curl -Ls --tlsv1.2 --proto "=https" --retry 3 https://cli.doppler.com/install.sh | sh
 
 # Setup dynamic entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh

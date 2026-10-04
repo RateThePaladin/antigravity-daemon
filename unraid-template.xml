@@ -16,6 +16,5 @@
   
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Container User ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Container Group ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
-  <Config Name="Doppler Token" Target="DOPPLER_TOKEN" Default="" Mode="" Description="Optional: Doppler Service Token to inject secrets into the agent's environment." Type="Variable" Display="always" Required="false" Mask="true"/>
   <Config Name="Instance Name" Target="AGY_INSTANCE_NAME" Default="Unraid-Daemon" Mode="" Description="Optional: Locks the remote-control session to a specific name. Prevents offline 'ghost' instances from being created when the container updates." Type="Variable" Display="always" Required="false" Mask="false"/>
 </Container>
