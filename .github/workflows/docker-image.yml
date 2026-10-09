@@ -145,6 +145,9 @@ jobs:
       packages: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -195,6 +198,7 @@ jobs:
           if ! gh release view "$TAG_NAME" > /dev/null 2>&1; then
             echo "Creating GitHub Release $TAG_NAME..."
             gh release create "$TAG_NAME" \
+              --target "$GITHUB_SHA" \
               --title "Antigravity CLI $TAG_NAME" \
               --notes "Automated release for Antigravity CLI version ${VERSION}"
           else
