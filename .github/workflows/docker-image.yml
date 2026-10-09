@@ -1,6 +1,11 @@
 name: Create and publish Docker images
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.antigravity-version'
   release:
     types:
       - published
@@ -32,10 +37,24 @@ jobs:
       image_name: ${{ steps.image-name.outputs.image_name }}
       tags: ${{ steps.meta.outputs.tags }}
       labels: ${{ steps.meta.outputs.labels }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Compute lowercase image name
         id: image-name
         run: echo "image_name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          if [ -f .antigravity-version ]; then
+            VERSION=$(cat .antigravity-version | tr -d '[:space:]')
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -43,10 +62,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image_name }}
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.use_latest_tag == true) || github.event_name == 'workflow_call' }},priority=1000
+            type=raw,value=latest,enable=${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.use_latest_tag == true) || github.event_name == 'workflow_call' || github.event_name == 'push' }},priority=1000
             type=raw,value=${{ inputs.version_tag }},enable=${{ github.event_name == 'workflow_call' }}
+            type=raw,value=v${{ steps.version.outputs.version }},enable=${{ github.event_name == 'push' && steps.version.outputs.version != '' }}
             type=ref,event=tag
-            type=ref,event=branch,enable=${{ !inputs.use_latest_tag && github.event_name != 'workflow_call' }}
+            type=ref,event=branch,enable=${{ !inputs.use_latest_tag && github.event_name != 'workflow_call' && github.event_name != 'push' }}
 
   build:
     needs: prepare
@@ -121,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: read
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -159,6 +179,24 @@ jobs:
           echo "📝 Event: ${{ github.event_name }}"
           if [ "${{ github.event_name }}" == "release" ]; then
             echo "📝 Triggered by release: ${{ github.event.release.tag_name }}"
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            echo "📝 Triggered by push to branch: ${{ github.ref_name }}"
           else
-            echo "📝 Triggered by manual workflow dispatch on branch: ${{ github.ref_name }}"
+            echo "📝 Triggered by workflow dispatch on ref: ${{ github.ref_name }}"
+          fi
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && needs.prepare.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          TAG_NAME="v${VERSION}"
+          if ! gh release view "$TAG_NAME" > /dev/null 2>&1; then
+            echo "Creating GitHub Release $TAG_NAME..."
+            gh release create "$TAG_NAME" \
+              --title "Antigravity CLI $TAG_NAME" \
+              --notes "Automated release for Antigravity CLI version ${VERSION}"
+          else
+            echo "Release $TAG_NAME already exists."
           fi

@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   check:
@@ -14,18 +15,62 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Check version and release
-        env:
-          GH_TOKEN: ${{ github.token }}
+        with:
+          fetch-depth: 0
+
+      - name: Check for new version
+        id: check_version
         run: |
           LATEST=$(curl -fsSL https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json | jq -r .version)
-          echo "Latest Antigravity CLI version is: $LATEST"
+          CURRENT=$(cat .antigravity-version 2>/dev/null | tr -d '[:space:]' || echo "none")
+          echo "Latest Antigravity CLI version: $LATEST"
+          echo "Current tracked version: $CURRENT"
           
-          # Check if we already have a release for this version
-          if ! gh release view "v$LATEST" > /dev/null 2>&1; then
-            echo "Release v$LATEST not found. Creating..."
-            gh release create "v$LATEST" --title "Antigravity CLI v$LATEST" --notes "Automated release for Antigravity CLI version $LATEST"
+          if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
+            echo "new_version=true" >> "$GITHUB_OUTPUT"
+            echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+            echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
           else
-            echo "Release v$LATEST already exists. Skipping."
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "No update detected."
           fi
+
+      - name: Create Update PR
+        if: steps:check_version.outputs.new_version == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.check_version.outputs.latest }}
+          CURRENT: ${{ steps.check_version.outputs.current }}
+        run: |
+          BRANCH_NAME="bump/antigravity-v${LATEST}"
+          
+          # Check if an open PR for this branch already exists
+          if gh pr list --state open --head "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+            echo "An open PR for $BRANCH_NAME already exists. Skipping."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "$BRANCH_NAME"
+          echo "$LATEST" > .antigravity-version
+          git add .antigravity-version
+          git commit -m "chore(deps): Antigravity CLI v${LATEST}"
+          git push origin "$BRANCH_NAME" --force
+
+          PR_BODY="$(printf "A new version of Antigravity CLI (**v%s**) is available (current: **v%s**).\n\nMerging this PR will automatically build and publish the Docker container images (\`:latest\` and \`:v%s\`) to GHCR, and create the GitHub Release.\n\nCC @RateThePaladin - please review and merge when ready." "$LATEST" "$CURRENT" "$LATEST")"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "chore(deps): Antigravity CLI v${LATEST}" \
+            --body "$PR_BODY" \
+            --assignee RateThePaladin \
+            --reviewer RateThePaladin || \
+          gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "chore(deps): Antigravity CLI v${LATEST}" \
+            --body "$PR_BODY" \
+            --assignee RateThePaladin
