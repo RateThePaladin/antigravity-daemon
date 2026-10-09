@@ -36,7 +36,7 @@ jobs:
           fi
 
       - name: Create Update PR
-        if: steps:check_version.outputs.new_version == 'true'
+        if: steps.check_version.outputs.new_version == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           LATEST: ${{ steps.check_version.outputs.latest }}
