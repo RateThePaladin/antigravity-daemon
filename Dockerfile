@@ -4,6 +4,7 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     curl wget bash git openssh-client ca-certificates gosu sudo \
     python3 python3-pip python3-venv \
+    golang-go \
     build-essential jq unzip tree && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
@@ -11,6 +12,9 @@ RUN apt-get update && apt-get install -y \
     mkdir -p /usr/local/bin && \
     mv /root/.local/bin/agy /usr/local/bin/agy
 
+# Configure Go environment to persist modules and binaries in /config/go
+ENV GOPATH=/config/go
+ENV PATH="/config/go/bin:${PATH}"
 
 # Setup dynamic entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh

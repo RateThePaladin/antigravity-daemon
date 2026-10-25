@@ -21,11 +21,13 @@ echo "${AGY_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${AGY_USER}
 chmod 0440 /etc/sudoers.d/${AGY_USER}
 
 # Set ownership of mounted directories
-mkdir -p /config /workspace
+mkdir -p /config/go/bin /workspace
 chown -R ${PUID}:${PGID} /config /workspace
 
-# Set HOME so agy knows where to look for configs
+# Set HOME and Go environment so agy and dev tools know where to look for configs
 export HOME=/config
+export GOPATH=/config/go
+export PATH="/config/go/bin:${PATH}"
 
 # Generate the CLI settings if they don't exist yet
 mkdir -p /config/.gemini/antigravity-cli
