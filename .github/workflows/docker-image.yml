@@ -117,6 +117,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           labels: ${{ needs.prepare.outputs.labels }}
+          build-args: |
+            AGY_VERSION=${{ needs.prepare.outputs.version }}
           cache-from: type=gha,scope=${{ matrix.variant }}-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.variant }}-${{ matrix.arch }}
           provenance: false
