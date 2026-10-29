@@ -59,18 +59,16 @@ jobs:
           git commit -m "chore(deps): Antigravity CLI v${LATEST}"
           git push origin "$BRANCH_NAME" --force
 
-          PR_BODY="$(printf "A new version of Antigravity CLI (**v%s**) is available (current: **v%s**).\n\nMerging this PR will automatically build and publish the Docker container images (\`:latest\` and \`:v%s\`) to GHCR, and create the GitHub Release.\n\nCC @RateThePaladin - please review and merge when ready." "$LATEST" "$CURRENT" "$LATEST")"
+          PR_BODY="$(printf "A new version of Antigravity CLI (**v%s**) is available (current: **v%s**).\n\nMerging this PR will automatically build and publish the Docker container images (\`:latest\` and \`:v%s\`) to GHCR, and create the GitHub Release." "$LATEST" "$CURRENT" "$LATEST")"
 
           gh pr create \
             --base main \
             --head "$BRANCH_NAME" \
             --title "chore(deps): Antigravity CLI v${LATEST}" \
             --body "$PR_BODY" \
-            --assignee RateThePaladin \
             --reviewer RateThePaladin || \
           gh pr create \
             --base main \
             --head "$BRANCH_NAME" \
             --title "chore(deps): Antigravity CLI v${LATEST}" \
-            --body "$PR_BODY" \
-            --assignee RateThePaladin
+            --body "$PR_BODY"
