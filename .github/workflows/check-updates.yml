@@ -1,74 +1,116 @@
 name: Check for Antigravity Updates
 
+# Fully automated upstream updates:
+#   1. Detect a new Antigravity CLI release from the upstream manifest.
+#   2. Commit the bump of .antigravity-version straight to main (no PR).
+#   3. Build & publish the image (:latest + :vX.Y.Z) via docker-image.yml,
+#      which also creates the GitHub Release. Unraid then shows
+#      "update available" on its own.
+# If a publish fails, the next scheduled run notices the missing release and
+# retries. You only get notified when a run fails.
+
 on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: antigravity-update
+  cancel-in-progress: false
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the version bump to main
+      pull-requests: write   # close superseded legacy bump PRs
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      latest: ${{ steps.check_version.outputs.latest }}
+      sha: ${{ steps.decide.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          fetch-depth: 0
+          ref: main
+          # Credentials are kept because this job pushes the bump commit.
 
       - name: Check for new version
         id: check_version
         run: |
+          set -euo pipefail
           LATEST=$(curl -fsSL https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json | jq -r .version)
-          CURRENT=$(cat .antigravity-version 2>/dev/null | tr -d '[:space:]' || echo "none")
+          CURRENT=$(tr -d '[:space:]' < .antigravity-version 2>/dev/null || echo "none")
           echo "Latest Antigravity CLI version: $LATEST"
           echo "Current tracked version: $CURRENT"
-          
-          if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
-            echo "new_version=true" >> "$GITHUB_OUTPUT"
-            echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
-            echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
-          else
-            echo "new_version=false" >> "$GITHUB_OUTPUT"
-            echo "No update detected."
+
+          # The manifest is remote, untrusted input: only accept a plain semver
+          # before it reaches GITHUB_OUTPUT, commits, tags or release text.
+          if ! [[ "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unexpected version string from manifest; refusing to continue."
+            exit 1
           fi
 
-      - name: Create Update PR
-        if: steps.check_version.outputs.new_version == 'true'
+          {
+            echo "latest=$LATEST"
+            echo "current=$CURRENT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump to main
+        if: steps.check_version.outputs.latest != steps.check_version.outputs.current
         env:
-          GH_TOKEN: ${{ github.token }}
           LATEST: ${{ steps.check_version.outputs.latest }}
-          CURRENT: ${{ steps.check_version.outputs.current }}
         run: |
-          BRANCH_NAME="bump/antigravity-v${LATEST}"
-          
-          # Check if an open PR for this branch already exists
-          if gh pr list --state open --head "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
-            echo "An open PR for $BRANCH_NAME already exists. Skipping."
-            exit 0
-          fi
-
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git checkout -B "$BRANCH_NAME"
           echo "$LATEST" > .antigravity-version
           git add .antigravity-version
           git commit -m "chore(deps): Antigravity CLI v${LATEST}"
-          git push origin "$BRANCH_NAME" --force
+          # Pushes made with GITHUB_TOKEN do not trigger other workflows, so this
+          # does not double-build; the publish job below does the build.
+          git push origin HEAD:main
 
-          PR_BODY="$(printf "A new version of Antigravity CLI (**v%s**) is available (current: **v%s**).\n\nMerging this PR will automatically build and publish the Docker container images (\`:latest\` and \`:v%s\`) to GHCR, and create the GitHub Release." "$LATEST" "$CURRENT" "$LATEST")"
+      - name: Decide whether to publish
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.check_version.outputs.latest }}
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if gh release view "v${LATEST}" >/dev/null 2>&1; then
+            echo "Release v${LATEST} already published. Nothing to do."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release v${LATEST} not published yet. Publishing."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
 
-          gh pr create \
-            --base main \
-            --head "$BRANCH_NAME" \
-            --title "chore(deps): Antigravity CLI v${LATEST}" \
-            --body "$PR_BODY" \
-            --reviewer RateThePaladin || \
-          gh pr create \
-            --base main \
-            --head "$BRANCH_NAME" \
-            --title "chore(deps): Antigravity CLI v${LATEST}" \
-            --body "$PR_BODY"
+      - name: Close superseded bump PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.check_version.outputs.latest }}
+        run: |
+          set -euo pipefail
+          gh pr list --state open --limit 100 --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("bump/antigravity-v")) | .number' |
+          while read -r num; do
+            gh pr close "$num" --delete-branch \
+              --comment "Superseded: updates are now published automatically (current: v${LATEST})."
+          done
+
+  publish:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    permissions:
+      actions: write
+      contents: write
+      packages: write
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      version_tag: v${{ needs.check.outputs.latest }}
+      ref: ${{ needs.check.outputs.sha }}

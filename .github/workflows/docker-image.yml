@@ -9,12 +9,21 @@ on:
   release:
     types:
       - published
+  # Called by check-updates.yml for fully automated upstream releases.
+  # NOTE: inside a called workflow, github.event_name / github.sha are the
+  # *caller's* values, so "is this a call?" is detected via inputs.version_tag
+  # and the commit to build is passed explicitly as inputs.ref.
   workflow_call:
     inputs:
       version_tag:
         description: 'Explicit version tag to apply (e.g. v1.2.3)'
         required: true
         type: string
+      ref:
+        description: 'Commit SHA to build (defaults to github.sha)'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       use_latest_tag:
@@ -44,13 +53,20 @@ jobs:
         run: echo "image_name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
 
       - name: Read version
         id: version
         run: |
           if [ -f .antigravity-version ]; then
-            VERSION=$(cat .antigravity-version | tr -d '[:space:]')
+            VERSION=$(tr -d '[:space:]' < .antigravity-version)
+            if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::.antigravity-version is not a plain semver: $VERSION"
+              exit 1
+            fi
             echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           else
             echo "version=" >> "$GITHUB_OUTPUT"
@@ -58,15 +74,15 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image_name }}
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.use_latest_tag == true) || github.event_name == 'workflow_call' || github.event_name == 'push' }},priority=1000
-            type=raw,value=${{ inputs.version_tag }},enable=${{ github.event_name == 'workflow_call' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.use_latest_tag == true) || inputs.version_tag != '' || github.event_name == 'push' }},priority=1000
+            type=raw,value=${{ inputs.version_tag }},enable=${{ inputs.version_tag != '' }}
             type=raw,value=v${{ steps.version.outputs.version }},enable=${{ github.event_name == 'push' && steps.version.outputs.version != '' }}
             type=ref,event=tag
-            type=ref,event=branch,enable=${{ !inputs.use_latest_tag && github.event_name != 'workflow_call' && github.event_name != 'push' }}
+            type=ref,event=branch,enable=${{ !inputs.use_latest_tag && inputs.version_tag == '' && github.event_name != 'push' }}
 
   build:
     needs: prepare
@@ -94,16 +110,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
-        
+          persist-credentials: false
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -111,7 +128,7 @@ jobs:
 
       - name: Build and push Docker image (${{ matrix.variant }} / ${{ matrix.arch }})
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           file: ${{ matrix.dockerfile }}
@@ -125,13 +142,15 @@ jobs:
           outputs: type=image,name=${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
+        env:
+          VARIANT: ${{ matrix.variant }}
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
-          mkdir -p "/tmp/digests/${{ matrix.variant }}"
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${{ matrix.variant }}/${digest#sha256:}"
+          mkdir -p "/tmp/digests/${VARIANT}"
+          touch "/tmp/digests/${VARIANT}/${DIGEST#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: digests-${{ matrix.variant }}-${{ matrix.arch }}
           path: /tmp/digests
@@ -148,20 +167,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
 
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: /tmp/digests
           pattern: digests-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -169,38 +191,54 @@ jobs:
 
       - name: Create manifest list and push
         working-directory: /tmp/digests/daemon
-        run: |
-          docker buildx imagetools create \
-            $(echo "$TAGS" | xargs -I {} echo -t {}) \
-            $(printf '${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }}@sha256:%s ' *)
         env:
           TAGS: ${{ needs.prepare.outputs.tags }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ needs.prepare.outputs.image_name }}
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && args+=(-t "$tag")
+          done <<< "$TAGS"
+          for digest in *; do
+            args+=("${IMAGE_REF}@sha256:${digest}")
+          done
+          docker buildx imagetools create "${args[@]}"
 
       - name: Output build information
+        env:
+          TAGS: ${{ needs.prepare.outputs.tags }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           echo "✅ Docker images built and pushed successfully!"
           echo "🐋 Images:"
-          echo '${{ needs.prepare.outputs.tags }}' | sed 's/^/  - /'
-          echo "📝 Event: ${{ github.event_name }}"
-          if [ "${{ github.event_name }}" == "release" ]; then
-            echo "📝 Triggered by release: ${{ github.event.release.tag_name }}"
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            echo "📝 Triggered by push to branch: ${{ github.ref_name }}"
+          printf '%s\n' "$TAGS" | sed 's/^/  - /'
+          echo "📝 Event: ${EVENT_NAME}"
+          if [ "$EVENT_NAME" == "release" ]; then
+            echo "📝 Triggered by release: ${RELEASE_TAG}"
+          elif [ "$EVENT_NAME" == "push" ]; then
+            echo "📝 Triggered by push to branch: ${REF_NAME}"
           else
-            echo "📝 Triggered by workflow dispatch on ref: ${{ github.ref_name }}"
+            echo "📝 Triggered by workflow dispatch on ref: ${REF_NAME}"
           fi
 
+      # Release creation is the last step, so "release vX.Y.Z exists" means
+      # "vX.Y.Z was fully published". check-updates.yml relies on this to retry
+      # failed publishes on its next run.
       - name: Create GitHub Release
-        if: github.event_name == 'push' && needs.prepare.outputs.version != ''
+        if: (github.event_name == 'push' || inputs.version_tag != '') && needs.prepare.outputs.version != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          TARGET_SHA: ${{ inputs.ref || github.sha }}
         run: |
           TAG_NAME="v${VERSION}"
           if ! gh release view "$TAG_NAME" > /dev/null 2>&1; then
             echo "Creating GitHub Release $TAG_NAME..."
             gh release create "$TAG_NAME" \
-              --target "$GITHUB_SHA" \
+              --target "$TARGET_SHA" \
               --title "Antigravity CLI $TAG_NAME" \
               --notes "Automated release for Antigravity CLI version ${VERSION}"
           else
