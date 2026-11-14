@@ -64,7 +64,8 @@ export PATH="/config/go/bin:${PATH}"
 mkdir -p /config/.gemini/antigravity-cli
 SETTINGS_FILE="/config/.gemini/antigravity-cli/settings.json"
 if [ ! -f "$SETTINGS_FILE" ]; then
-  echo '{"model": "Gemini 3.1 Pro (High)"}' > "$SETTINGS_FILE"
+  # Use a display name from `agy models`; unavailable models fall back with a warning
+  echo '{"model": "Gemini 4 Argon (Medium)"}' > "$SETTINGS_FILE"
 fi
 chown -R "${PUID}:${PGID}" /config/.gemini
 

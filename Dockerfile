@@ -53,6 +53,9 @@ RUN curl -fsSL https://antigravity.google/cli/install.sh | bash && \
       fi; \
     fi
 
+# Ship the example agent settings so they can be restored from the console
+COPY examples/settings.json /usr/share/antigravity-daemon/settings.example.json
+
 # Setup dynamic entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
