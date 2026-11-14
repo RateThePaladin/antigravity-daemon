@@ -1,0 +1,17 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/settings.json",
+  "model": "Gemini 4 Argon (Medium)",
+  "toolPermission": "always-proceed",
+  "permissions": {
+    "allow": [
+      "write_file(*)"
+    ],
+    "deny": [
+      "command(sudo)",
+      "command(rm -rf /)"
+    ]
+  },
+  "trustedWorkspaces": [
+    "/workspace"
+  ]
+}

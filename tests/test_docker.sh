@@ -75,6 +75,11 @@ echo "$NODE_VERSION"
 docker exec "$CONTAINER_ID" gosu "${TEST_PUID}:${TEST_PGID}" npm --version
 docker exec "$CONTAINER_ID" gosu "${TEST_PUID}:${TEST_PGID}" bash -c "printf 'package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Go execution verified\") }\n' > /workspace/test.go && go run /workspace/test.go && rm /workspace/test.go"
 
+# 6. Example agent settings ship in the image and are valid JSON
+docker exec "$CONTAINER_ID" jq -e '.model and .toolPermission' /usr/share/antigravity-daemon/settings.example.json >/dev/null \
+    || fail "settings.example.json is missing or invalid in the image."
+echo "✓ example settings.json shipped and valid"
+
 echo "[4/5] Verifying security defaults..."
 
 # Sudo must be disabled unless AGY_ALLOW_SUDO=true
