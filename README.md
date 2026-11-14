@@ -20,7 +20,7 @@ If you are not using Unraid, you can run this with a standard `docker-compose.ym
 ```yaml
 services:
   antigravity-daemon:
-    image: ghcr.io/RateThePaladin/antigravity-daemon:latest
+    image: ghcr.io/ratethepaladin/antigravity-daemon:latest
     container_name: antigravity-daemon
     tty: true
     stdin_open: true
@@ -30,20 +30,23 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - AGY_MODEL=gemini-3.1-pro
-      - AGY_SKIP_PERMISSIONS=false
     restart: unless-stopped
 ```
 
 ## Configuration Variables
-This daemon is entirely configured via environment variables.
+The container itself is configured via the environment variables below. The model and permission behaviour of the agent are configured in the CLI's `settings.json` (see [Managing Agent Settings](#managing-agent-settings)).
 
 | Variable | Default | Description |
 |---|---|---|
 | `PUID` / `PGID` | `99` / `100` | The user and group ID the agent will run as. Match this to your host user to avoid file permission issues. |
-| `AGY_MODEL` | *(None)* | The LLM model you want the agent to use (e.g. `gemini-3.1-pro`). |
-| `AGY_SKIP_PERMISSIONS` | `false` | Set to `true` to run fully autonomously. This bypasses human approval checks, allowing the agent to execute commands and write files headlessly. |
 | `AGY_INSTANCE_NAME` | *(Optional)* | Locks the remote-control session to a specific name. Prevents offline "ghost" instances from being created when the container updates. |
+| `AGY_ALLOW_SUDO` | `false` | Set to `true` to give the agent passwordless `sudo` inside the container (e.g. so it can `apt-get install` tools). Off by default: an agent that reads untrusted content can be prompt-injected, and root lets injected commands tamper with the container and create root-owned files on your shares. `pip`, `npm` and `go install` work without it. |
+| `AGY_ALLOW_ROOT` | `false` | The container refuses to start with `PUID=0` unless this is `true`. |
+
+> **Upgrading from an older image?** Earlier versions granted the agent passwordless `sudo` unconditionally. Set `AGY_ALLOW_SUDO=true` if you depend on it.
+
+## Automatic Updates
+A scheduled GitHub Action checks for new Antigravity CLI releases daily. When one appears it bumps `.antigravity-version` on `main`, builds and publishes `:latest` and `:vX.Y.Z` to GHCR, and creates a GitHub Release. No manual merge is needed, and Unraid simply shows an update as available. The build fails if the installer delivers a different version than the one being tagged.
 
 ## First-Time Authentication
 The first time the container starts, you will need to authenticate the agent:
