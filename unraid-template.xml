@@ -17,4 +17,5 @@
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Container User ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Container Group ID" Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="Instance Name" Target="AGY_INSTANCE_NAME" Default="Unraid-Daemon" Mode="" Description="Optional: Locks the remote-control session to a specific name. Prevents offline 'ghost' instances from being created when the container updates." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Allow Sudo" Target="AGY_ALLOW_SUDO" Default="false" Mode="" Description="Give the agent passwordless sudo inside the container (e.g. to apt-get install tools). Off by default for safety against prompt injection." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
 </Container>
