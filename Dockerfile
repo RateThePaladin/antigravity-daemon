@@ -34,6 +34,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV GOPATH=/config/go
 ENV PATH="/config/go/bin:${PATH}"
 
+# Install PowerPoint generation & rendering toolchain (placed before the CLI
+# layer so automated .antigravity-version bumps reuse this cached layer).
+# Includes LibreOffice Impress + Poppler + metric-compatible fonts for headless
+# PPTX -> PDF -> PNG rendering, plus python-pptx / pptxgenjs / pandoc.
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      libreoffice-impress \
+      poppler-utils \
+      librsvg2-bin \
+      pandoc \
+      fontconfig \
+      fonts-liberation \
+      fonts-dejavu-core \
+      fonts-crosextra-carlito \
+      fonts-crosextra-caladea \
+      fonts-noto-core \
+      fonts-noto-color-emoji \
+      python3-pil \
+      python3-lxml \
+      python3-defusedxml \
+      python3-matplotlib && \
+    fc-cache -f && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip3 install --no-cache-dir --break-system-packages \
+      python-pptx \
+      pdf2image && \
+    npm install -g pptxgenjs && \
+    npm cache clean --force
+
+# Allow Node.js scripts in /workspace to require globally installed packages (e.g. pptxgenjs)
+ENV NODE_PATH=/usr/lib/node_modules
+
 # Install Antigravity CLI
 # Cache is invalidated whenever .antigravity-version changes or AGY_VERSION build arg is provided.
 # The upstream installer always fetches the *latest* release (it verifies a sha512 from the

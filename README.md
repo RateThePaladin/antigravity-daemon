@@ -6,6 +6,7 @@ This container strictly follows Unraid Community Application best practices:
 - **PUID / PGID Support:** Runs as `nobody:users` to prevent root permission errors.
 - **Centralized `/config`:** Uses a single mapped directory for all persistent data.
 - **Robust Toolchain:** Pre-installed with Go, Python 3, Node.js, `npm`, `pip`, and `build-essential` so the agent can natively compile and test code without friction.
+- **PowerPoint Generation & Rendering:** Includes `python-pptx`, `pptxgenjs`, `pandoc`, `matplotlib`, `Pillow`, `librsvg2-bin`, LibreOffice Impress, `poppler-utils` (`pdftoppm`), and metric-compatible fonts (`Carlito`, `Caladea`, `Liberation`, `DejaVu`, `Noto`) so the agent can build `.pptx` decks and render slides to PDF/PNG for visual inspection.
 
 ## Unraid Installation
 You can easily deploy this using the included Unraid template:
