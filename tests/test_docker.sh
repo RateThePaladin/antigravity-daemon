@@ -75,7 +75,54 @@ echo "$NODE_VERSION"
 docker exec "$CONTAINER_ID" gosu "${TEST_PUID}:${TEST_PGID}" npm --version
 docker exec "$CONTAINER_ID" gosu "${TEST_PUID}:${TEST_PGID}" bash -c "printf 'package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Go execution verified\") }\n' > /workspace/test.go && go run /workspace/test.go && rm /workspace/test.go"
 
-# 6. Example agent settings ship in the image and are valid JSON
+# 6. Check PowerPoint generation and rendering toolchain under the unprivileged user
+echo "Verifying PowerPoint generation & rendering tools..."
+docker exec "$CONTAINER_ID" gosu "${TEST_PUID}:${TEST_PGID}" env HOME=/config bash -euo pipefail -c '
+  tmpdir=$(mktemp -d /workspace/pptx-test-XXXXXX)
+  trap "rm -rf \"$tmpdir\"" EXIT
+
+  # Generate a deck with python-pptx
+  python3 - "$tmpdir/py_deck.pptx" <<'\''PY'\''
+import sys
+from pptx import Presentation
+import matplotlib
+import PIL
+import defusedxml
+import pdf2image
+
+prs = Presentation()
+slide = prs.slides.add_slide(prs.slide_layouts[0])
+slide.shapes.title.text = "Hello from python-pptx"
+prs.save(sys.argv[1])
+PY
+
+  # Generate a deck with pptxgenjs (via global NODE_PATH)
+  node -e '\''
+    const PptxGenJS = require("pptxgenjs");
+    const pptx = new PptxGenJS();
+    const slide = pptx.addSlide();
+    slide.addText("Hello from pptxgenjs", { x: 1, y: 1, fontSize: 24 });
+    pptx.writeFile({ fileName: process.argv[1] }).catch(err => { console.error(err); process.exit(1); });
+  '\'' "$tmpdir/js_deck.pptx"
+
+  # Render both decks to PDF with LibreOffice Impress and rasterize to PNG with Poppler
+  libreoffice --headless --convert-to pdf --outdir "$tmpdir" "$tmpdir/py_deck.pptx" "$tmpdir/js_deck.pptx" >/dev/null
+  pdftoppm -png -r 150 "$tmpdir/py_deck.pdf" "$tmpdir/py_slide"
+  pdftoppm -png -r 150 "$tmpdir/js_deck.pdf" "$tmpdir/js_slide"
+
+  test -s "$tmpdir/py_slide-1.png"
+  test -s "$tmpdir/js_slide-1.png"
+
+  # Verify auxiliary tools and metric-compatible fonts (Carlito = Calibri, Liberation = Arial)
+  rsvg-convert --version >/dev/null
+  pandoc --version >/dev/null
+  FONTS=$(fc-list)
+  grep -qi "Carlito" <<< "$FONTS"
+  grep -qi "Liberation" <<< "$FONTS"
+' || fail "PowerPoint generation/rendering toolchain verification failed."
+echo "✓ PowerPoint generation (python-pptx, pptxgenjs, pandoc) and rendering (LibreOffice, pdftoppm, fonts) verified"
+
+# 7. Example agent settings ship in the image and are valid JSON
 docker exec "$CONTAINER_ID" jq -e '.model and .toolPermission' /usr/share/antigravity-daemon/settings.example.json >/dev/null \
     || fail "settings.example.json is missing or invalid in the image."
 echo "✓ example settings.json shipped and valid"
